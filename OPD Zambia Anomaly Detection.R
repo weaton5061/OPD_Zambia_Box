@@ -108,7 +108,7 @@ summary(outpatient.df$Value, useNA = "always")
 #Aggregate Value Data by the HF, Month and Year
 #outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
 # commenting this out for now (on 6-4-20) so that Province is also included in dataframe
-outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Value = sum(Value))
+outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Total_Value = sum(Value))
 
 #Create Date from Month, Year
 outpatient2$month_num <- match(outpatient2$Month, month.abb)
@@ -121,6 +121,12 @@ order("unique.outpatient2.District.")
 # Note: not sure what this code does?
 Districts.df[,order("unique.outpatient2.District."(df))]
 
-write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/outpatient2.csv")
+# ---- write to csv file
+write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
 
-
+# Test previously written code
+test <- outpatient2 %>%
+    filter(District=="Senga District") %>%
+    ggplot() +
+    geom_line(mapping = (aes(x=date, y=Value))) +
+    facet_wrap(~ Org_Unit, scales="free_y") + theme(strip.text = element_text(size=8))
