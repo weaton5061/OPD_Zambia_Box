@@ -125,7 +125,8 @@ Districts.df[,order("unique.outpatient2.District."(df))]
 write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
 
 # Test previously written code
-test <- outpatient2 %>%
+# Determine what this code is supposed to do and why it is not working. Assume visualization is the intention.
+outpatient2 %>%
     filter(District=="Senga District") %>%
     ggplot() +
     geom_line(mapping = (aes(x=date, y=Value))) +
