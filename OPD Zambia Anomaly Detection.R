@@ -51,12 +51,11 @@ names(inpatient_outpatient.df)
 table(inpatient_outpatient.df$Year, useNA="always") # no missing values
 # 2015   2016   2017   2018   2019   2020   <NA> 
 #  327 209266 243851 236156 239987  69356      0 
+
 table(inpatient_outpatient.df$Month, useNA="always") # no missing values
 # Apr   Aug   Dec   Feb   Jan   Jul   Jun   Mar   May   Nov   Oct   Sep  <NA> 
 # 85334 79823 77526 94197 91710 78327 78689 96413 79508 76644 80392 80380     0 
-table(inpatient_outpatient.df$Org_Unit_ID, useNA="always")
-table(inpatient_outpatient.df$Org_Unit, useNA="always")
-table(inpatient_outpatient.df$District, useNA="always")
+
 table(inpatient_outpatient.df$Province, useNA="always") # no missing values
 # Central Province    Copperbelt Province       Eastern Province       Luapula Province        Lusaka Province 
 # 108490                 107190                 127133                  97286                  78323 
@@ -64,11 +63,47 @@ table(inpatient_outpatient.df$Province, useNA="always") # no missing values
 # 60364                  90624                  85288                 128654                 115591 
 # <NA> 
 #    0 
+
 table(inpatient_outpatient.df$Data_Element, useNA="always") # no missing values
 # Inpatient Admissions OPD First Attendance                 <NA> 
 #     174873               824070                    0 
+
+table(inpatient_outpatient.df$Age, useNA="always") # no missing values
+# (>=15)y  (1-4)y (5-14)Y    <1 y    <NA> 
+#  275444  254607  244660  224232       0 
+
+table(inpatient_outpatient.df$Gender, useNA="always") # no missing values
+# Female   Male   <NA> 
+#     503953 494990      0 
+
 table(inpatient_outpatient.df$Value, useNA="always")
-table(inpatient_outpatient.df$Age, useNA="always")
-table(inpatient_outpatient.df$Gender, useNA="always")
+table(inpatient_outpatient.df$Org_Unit_ID, useNA="always")
+table(inpatient_outpatient.df$Org_Unit, useNA="always")
+table(inpatient_outpatient.df$District, useNA="always")
+
+## ---- subset to appropriate 6 Provinces  -------------------------------------------------------------------------------
+# ----- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
+in_out_pt_6_prov.df <- inpatient_outpatient.df %>%
+    filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
+               Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
+
+##----aggregate data -------------------------------------------------------------------------------
+
+outpatient.df <- inpatient_outpatient.df[ which(inpatient_outpatient.df$Data_Element=='OPD First Attendance'), ]
+
+#Aggregate Value Data by the HF, Month and Year
+outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
+outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Value = sum(Value))
+
+#Create Date from Month, Year
+outpatient1$month_num <- match(outpatient1$Month, month.abb)
+outpatient1$date <- as.Date(with(outpatient1, paste(Year, month_num, 1, sep="-")), "%Y-%m-%d")
+
+#Identify all Unique Values for District
+Districts.df <- data.frame(unique(outpatient1$District))
+order("unique.outpatient1.District.")
+Districts.df[,order("unique.outpatient1.District."(df))]
+
+write.csv(outpatient1, file = "C:/Users/Brooke/Documents/MDA Zambia/Step D/outpatient1.csv")
 
 
