@@ -43,7 +43,10 @@ setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repositor
 ## ---- Inpatient Outpatient Facility Data  -------------------------------------------------------------------------------------
 inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")
 
-## ---- View dataset-----------------
+## ---- View dataset --------------------------------------------------------------------------------------------
+## ---- View descriptives ---------------------------------------------------------------------------------------
+## ---- CAN SKIP THIS SECTION OF CODE ---------------------------------------------------------------------------
+
 #View(inpatient_outpatient.df)
 names(inpatient_outpatient.df)
 
@@ -81,10 +84,14 @@ table(inpatient_outpatient.df$Org_Unit_ID, useNA="always")
 table(inpatient_outpatient.df$Org_Unit, useNA="always")
 table(inpatient_outpatient.df$District, useNA="always")
 
+## -------------------------------------------------------------------------------------------------
+## ---- CAN SKIP TO HERE ---------------------------------------------------------------------------
+## -------------------------------------------------------------------------------------------------
+
 ## ---- subset to appropriate 6 Provinces  -------------------------------------------------------------------------------
 #  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
 #  ----n = 68 districts
-in_out_pt_6_prov.df <- inpatient_outpatient.df %>%
+sixprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
 
@@ -94,7 +101,7 @@ in_out_pt_6_prov.df <- inpatient_outpatient.df %>%
 
 ##----aggregate data -------------------------------------------------------------------------------
 
-outpatient.df <- in_out_pt_6_prov.df[ which(in_out_pt_6_prov.df$Data_Element=='OPD First Attendance'), ]
+outpatient.df <- sixprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
 
 # Note: confirmed that outpatient.df also has n = 463,739 OPD First Attedance observations
 # table(outpatient.df$Data_Element, useNA = "always")
@@ -103,7 +110,6 @@ outpatient.df <- in_out_pt_6_prov.df[ which(in_out_pt_6_prov.df$Data_Element=='O
 
 # Are there any missing values in Value?
 unique(outpatient.df$Value, useNA = "always")
-summary(outpatient.df$Value, useNA = "always")
 
 #Aggregate Value Data by the HF, Month and Year
 #outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
@@ -116,7 +122,7 @@ outpatient2$date <- as.Date(with(outpatient2, paste(Year, month_num, 1, sep="-")
 
 #Identify all Unique Values for District
 Districts.df <- data.frame(unique(outpatient2$District)) # n = 68 unique districts
-order("unique.outpatient2.District.")
+order("unique.outpatient2.District.") #is this producing what it is supposed to?
 
 # Note: not sure what this code does?
 Districts.df[,order("unique.outpatient2.District."(df))]
@@ -124,10 +130,21 @@ Districts.df[,order("unique.outpatient2.District."(df))]
 # ---- write to csv file
 write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
 
-# Test previously written code
-# Determine what this code is supposed to do and why it is not working. Assume visualization is the intention.
+# Produce time series figures for the following districts -----------------
+
+# [1] Kaoma District        Kaputa District       Mansa District        Manyinga District     Kawambwa District     Lukulu District       Kalumbila District   
+# [8] Nalolo District       Senga District        Petauke District      Senanga District      Chifunabuli District  Chienge District      Solwezi District     
+# [15] Mushindamo District   Sinda District        Sikongo District      Mungwi District       Vubwi District        Kabompo District      Mbala District       
+# [22] Lundazi District      Mwense District       Zambezi District      Mwandi District       Mambwe District       Chipata District      Nchelenge District   
+# [29] Chinsali District     Mufumbwe District     Chama District        Kasama District       Nsama District        Chipili District      Kalabo District      
+# [36] Chavuma District      Nyimba District       Kasempa District      Shiwang'andu District Lunte District        Nakonde District      Sesheke District     
+# [43] Lunga District        Katete District       Samfya District       Chilubi District      Isoka District        Luwingu District      Ikelenge District    
+# [50] Mwansabombwe District Mpulungu District     Milenge District      Mporokoso District    Mwinilunga District   Mulobezi District     Mpika District       
+# [57] Sioma District        Limulunga District    Luampa District       Mitete District       Mafinga District      Lavushimanda District Kanchibiya District  
+# [64] Mongu District        Shang'ombo District   Chadiza District      Chembe District       Nkeyema District   
+
 outpatient2 %>%
-    filter(District=="Senga District") %>%
+    filter(District=="Kaoma District") %>%
     ggplot() +
-    geom_line(mapping = (aes(x=date, y=Value))) +
+    geom_line(mapping = (aes(x=date, y=Total_Value))) +
     facet_wrap(~ Org_Unit, scales="free_y") + theme(strip.text = element_text(size=8))
