@@ -82,28 +82,45 @@ table(inpatient_outpatient.df$Org_Unit, useNA="always")
 table(inpatient_outpatient.df$District, useNA="always")
 
 ## ---- subset to appropriate 6 Provinces  -------------------------------------------------------------------------------
-# ----- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
+#  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
+#  ----n = 68 districts
 in_out_pt_6_prov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
 
+# Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
+# Inpatient Admissions OPD First Attendance                 <NA> 
+#             112547               463739                    0 
+
 ##----aggregate data -------------------------------------------------------------------------------
 
-outpatient.df <- inpatient_outpatient.df[ which(inpatient_outpatient.df$Data_Element=='OPD First Attendance'), ]
+outpatient.df <- in_out_pt_6_prov.df[ which(in_out_pt_6_prov.df$Data_Element=='OPD First Attendance'), ]
+
+# Note: confirmed that outpatient.df also has n = 463,739 OPD First Attedance observations
+# table(outpatient.df$Data_Element, useNA = "always")
+# Inpatient Admissions OPD First Attendance                 <NA>
+#                   0               463739                    0 
+
+# Are there any missing values in Value?
+unique(outpatient.df$Value, useNA = "always")
+summary(outpatient.df$Value, useNA = "always")
 
 #Aggregate Value Data by the HF, Month and Year
-outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
+#outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
+# commenting this out for now (on 6-4-20) so that Province is also included in dataframe
 outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Value = sum(Value))
 
 #Create Date from Month, Year
-outpatient1$month_num <- match(outpatient1$Month, month.abb)
-outpatient1$date <- as.Date(with(outpatient1, paste(Year, month_num, 1, sep="-")), "%Y-%m-%d")
+outpatient2$month_num <- match(outpatient2$Month, month.abb)
+outpatient2$date <- as.Date(with(outpatient2, paste(Year, month_num, 1, sep="-")), "%Y-%m-%d")
 
 #Identify all Unique Values for District
-Districts.df <- data.frame(unique(outpatient1$District))
-order("unique.outpatient1.District.")
-Districts.df[,order("unique.outpatient1.District."(df))]
+Districts.df <- data.frame(unique(outpatient2$District)) # n = 68 unique districts
+order("unique.outpatient2.District.")
 
-write.csv(outpatient1, file = "C:/Users/Brooke/Documents/MDA Zambia/Step D/outpatient1.csv")
+# Note: not sure what this code does?
+Districts.df[,order("unique.outpatient2.District."(df))]
+
+write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/outpatient2.csv")
 
 
