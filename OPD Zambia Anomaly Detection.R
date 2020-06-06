@@ -96,6 +96,11 @@ sixprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
 
+# create smaller dataset to test out anomalize package, n = 3,716 observations
+# test out anomalize package on oneprov
+oneprov.df <- inpatient_outpatient.df %>%
+    filter(Province == "Luapula Province" & District =="Mwansabombwe District")
+
 # Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
 # Inpatient Admissions OPD First Attendance                 <NA> 
 #             112547               463739                    0 
@@ -103,6 +108,9 @@ sixprov.df <- inpatient_outpatient.df %>%
 ##----aggregate data -------------------------------------------------------------------------------
 
 outpatient.df <- sixprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
+
+# test same code as above with smaller dataset
+outpatient.df <-oneprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
 
 # Note: confirmed that outpatient.df also has n = 463,739 OPD First Attedance observations
 # table(outpatient.df$Data_Element, useNA = "always")
@@ -149,3 +157,50 @@ outpatient2 %>%
     ggplot() +
     geom_line(mapping = (aes(x=date, y=Total_Value))) +
     facet_wrap(~ Org_Unit, scales="free_y") + theme(strip.text = element_text(size=8))
+
+
+# Analyze Outliers --------------------------------------------------------
+
+# Analyze outliers: Outlier Report is available with verbose = TRUE
+iqr_outliers <- iqr(outpatient2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+
+gesd_outliers <- gesd(outpatient2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+
+# ploting function for anomaly plots
+ggsetup <- function(data) {
+    data %>%
+        ggplot(aes(rank, value, color = outlier)) +
+        geom_point() +
+        geom_line(aes(y = limit_upper), color = "red", linetype = 2) +
+        geom_line(aes(y = limit_lower), color = "red", linetype = 2) +
+        geom_text(aes(label = index), vjust = -1.25) +
+        theme_bw() +
+        scale_color_manual(values = c("No" = "#2c3e50", "Yes" = "#e31a1c")) +
+        expand_limits(y = 13) +
+        theme(legend.position = "bottom")
+}
+
+# Visualize
+p3 <- iqr_outliers %>% 
+    ggsetup() +
+    ggtitle("IQR: Top outliers sorted by rank") 
+
+p4 <- gesd_outliers %>% 
+    ggsetup() +
+    ggtitle("GESD: Top outliers sorted by rank") 
+
+# Show plots
+p3
+p4
+
+# Alternative code for assessing outliers ---------------------------------
+ %>% 
+    time_decompose(Total_Value) %>% 
+    anomalize(remainder) %>% 
+    time_recompose() %>% 
+    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.25)
+
+
+
+
+    
