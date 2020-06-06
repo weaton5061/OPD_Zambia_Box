@@ -92,7 +92,7 @@ table(inpatient_outpatient.df$District, useNA="always")
 
 ## ---- subset to appropriate 6 Provinces  -------------------------------------------------------------------------------
 #  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
-#  ----n = 68 districts
+#  ----n = 68 districts, over 1000 health facilities
 sixprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
