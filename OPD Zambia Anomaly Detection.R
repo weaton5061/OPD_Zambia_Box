@@ -100,8 +100,7 @@ sixprov.df <- inpatient_outpatient.df %>%
 # create smaller dataset to test out anomalize package, n = 606 observations
 # test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
-    filter(Province == "Luapula Province" & District =="Mwansabombwe District" & 
-            Org_Unit =="lu Mbereshi Mission Hospital")
+    filter(Province == "Luapula Province" & District =="Mwansabombwe District")
 
 # Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
 # Inpatient Admissions OPD First Attendance                 <NA> 
@@ -162,15 +161,76 @@ outpatient2 %>%
 
 
 # Analyze Outliers --------------------------------------------------------
+# Alternative code for assessing outliers ---------------------------------
 
+# try deleting the year, month, and month num variables
+
+# How to delete first, second and seventh column
+mydata <- outpatient2
+
+# Drop the columns of the dataframe
+mydata <- subset(outpatient2, select = c(Province, District, Org_Unit, Total_Value, date))
+
+# sort by date
+mydata2<-mydata[order(as.Date(mydata$date, format = "%d/%m/%Y")),]
+
+# Try Twitter and GESD Method ---------------------------------------------
+mydata2 %>%    # Twitter and GESD
+    time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
+                   # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
+                   # method uses trend to remove the trend (see decompose_twitter()).
+                   frequency = 12, # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+                   # Consider frequency = "auto" or 12, however obtain more anomalies if 12
+                   trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
+                   # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
+                   merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
+    anomalize(remainder, method = "gesd", 
+              alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
+              max_anoms = 0.20) %>%        # the maximum percentage of data that can be an anomaly
+    time_recompose() %>% 
+    #Anomaly Visualization
+    #plot_anomalies(ncol = 3, alpha_dots = 0.25) # this line of code plots without the grey area
+    plot_anomalies(time_recomposed = TRUE) + #, ncol = 3, alpha_dots = 0.25)
+    labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
+         y = "Total outpatient visits", subtitle = "insert subtitle") 
+
+# details
+mydata2 %>% glimpse()
+
+# plot_anomaly_decomposition() for visualizing the inner workings of how 
+# algorithm detects anomalies in the “remainder”.
+mydata2 %>%
+    time_decompose(Total_Value, frequency = "auto", trend = "auto", method = "twitter", merge = TRUE) %>%  # consider frequency = 12, however obtain more anomalies
+    anomalize(remainder, method = "gesd") %>% 
+    time_recompose() %>% 
+    plot_anomaly_decomposition() +
+    ggtitle("Freq/Trend = 'auto'")
+
+
+# Plot anomalies in multiple time series ----------------------------------
+
+#### MULTIPLE TIME SERIES ####
+mydata2 %>%
+    time_decompose(Total_Value, method = "stl") %>%
+    anomalize(remainder, method = "iqr") %>%
+    time_recompose() %>%
+    plot_anomalies(time_recomposed = TRUE, ncol = 3)
+
+plot_anomalies(mydata2, time_recomposed = FALSE, ncol = 1,
+               color_no = "#2c3e50", color_yes = "#e31a1c",
+               fill_ribbon = "grey70", alpha_dots = 1, alpha_circles = 1,
+               alpha_ribbon = 1, size_dots = 1.5, size_circles = 4)
+
+
+# Yet another method of examining outliers ----------------------------------
 # Analyze outliers: Outlier Report is available with verbose = TRUE
-iqr_outliers <- iqr(mydata2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+iqr_outliers <- iqr(x, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
 
-gesd_outliers <- gesd(mydata2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+gesd_outliers <- gesd(x, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
 
 # ploting function for anomaly plots
-ggsetup <- function(mydata2) {
-    mydata2 %>%
+ggsetup <- function(data) {
+    data %>%
         ggplot(aes(rank, value, color = outlier)) +
         geom_point() +
         geom_line(aes(y = limit_upper), color = "red", linetype = 2) +
@@ -181,6 +241,7 @@ ggsetup <- function(mydata2) {
         expand_limits(y = 13) +
         theme(legend.position = "bottom")
 }
+
 
 # Visualize
 p3 <- iqr_outliers %>% 
@@ -194,31 +255,6 @@ p4 <- gesd_outliers %>%
 # Show plots
 p3
 p4
-
-# Alternative code for assessing outliers ---------------------------------
-
-# try deleting the year, month, and month num variables
-
-# How to delete first, second and seventh column
-mydata <- outpatient2
-
-# Drop the columns of the dataframe
-mydata <- subset(outpatient2, select = c(Province, Total_Value, date))
-
-# sort by date
-mydata2<-mydata[order(as.Date(mydata$date, format = "%d/%m/%Y")),]
-
-# Try Twitter and GESD Method ---------------------------------------------
-mydata2 %>%    # Twitter and GESD
-    time_decompose(Total_Value, method = "twitter", trend = "12 months", merge = TRUE) %>% 
-    anomalize(remainder, method = "gesd") %>% 
-    time_recompose() %>% 
-    #Anomaly Visualization
-    plot_anomalies(time_recomposed = TRUE) + #, ncol = 3, alpha_dots = 0.25)
-    labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
-         y = "Total outpatient visits", subtitle = "insert subtitle")
-
-
 
 
 
