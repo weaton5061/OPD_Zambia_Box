@@ -34,7 +34,7 @@ library(readxl)
 library(ggplot2)
 library(tidyverse)
 library(anomalize)
-library(coindeskr)
+library(dplyr)
 
 ## ---- Set Working Drive -------------------------------------------------------------------------------------
 setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box")
@@ -45,51 +45,6 @@ setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repositor
 ## ---- Inpatient Outpatient Facility Data  -------------------------------------------------------------------------------------
 inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")
 
-## ---- View dataset --------------------------------------------------------------------------------------------
-## ---- View descriptives ---------------------------------------------------------------------------------------
-## ---- CAN SKIP THIS SECTION OF CODE ---------------------------------------------------------------------------
-
-#View(inpatient_outpatient.df)
-names(inpatient_outpatient.df)
-
-## Are there any missing values?
-table(inpatient_outpatient.df$Year, useNA="always") # no missing values
-# 2015   2016   2017   2018   2019   2020   <NA> 
-#  327 209266 243851 236156 239987  69356      0 
-
-table(inpatient_outpatient.df$Month, useNA="always") # no missing values
-# Apr   Aug   Dec   Feb   Jan   Jul   Jun   Mar   May   Nov   Oct   Sep  <NA> 
-# 85334 79823 77526 94197 91710 78327 78689 96413 79508 76644 80392 80380     0 
-
-table(inpatient_outpatient.df$Province, useNA="always") # no missing values
-# Central Province    Copperbelt Province       Eastern Province       Luapula Province        Lusaka Province 
-# 108490                 107190                 127133                  97286                  78323 
-# Muchinga Province North Western Province      Northern Province      Southern Province       Western Province 
-# 60364                  90624                  85288                 128654                 115591 
-# <NA> 
-#    0 
-
-table(inpatient_outpatient.df$Data_Element, useNA="always") # no missing values
-# Inpatient Admissions OPD First Attendance                 <NA> 
-#     174873               824070                    0 
-
-table(inpatient_outpatient.df$Age, useNA="always") # no missing values
-# (>=15)y  (1-4)y (5-14)Y    <1 y    <NA> 
-#  275444  254607  244660  224232       0 
-
-table(inpatient_outpatient.df$Gender, useNA="always") # no missing values
-# Female   Male   <NA> 
-#     503953 494990      0 
-
-table(inpatient_outpatient.df$Value, useNA="always")
-table(inpatient_outpatient.df$Org_Unit_ID, useNA="always")
-table(inpatient_outpatient.df$Org_Unit, useNA="always")
-table(inpatient_outpatient.df$District, useNA="always")
-
-## -------------------------------------------------------------------------------------------------
-## ---- CAN SKIP TO HERE ---------------------------------------------------------------------------
-## -------------------------------------------------------------------------------------------------
-
 ## ---- subset to appropriate 6 Provinces  -------------------------------------------------------------------------------
 #  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
 #  ----n = 68 districts, over 1000 health facilities
@@ -97,10 +52,16 @@ sixprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
 
-# create smaller dataset to test out anomalize package, n = 606 observations
-# test out anomalize package on oneprov
+# create smaller dataset to test out anomalize package, n = 606 observations, n = 7 health facilities
+# Org_Unit_IDs: [1] 1763 1764 1709 1728 1837 1627 1784
+# Org_Units :   [1] lu Mbereshi Mission Hospital                          lu Mbereshi Mission Hospital Affiliated Health Centre
+#               [3] lu Kazembe Zonal Rural Health Centre                  lu Lufubu Rural Health Centre                        
+#               [5] lu Salanga Rural Health Centre                        lu Chipunka Rural Health Centre                      
+#               [7] lu Mukamba Rural Health Centre  
+# Test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
-    filter(Province == "Luapula Province" & District =="Mwansabombwe District")
+    filter(Province == "Luapula Province" & District =="Mwansabombwe District") # &
+           #Org_Unit == "lu Mbereshi Mission Hospital Affiliated Health Centre")
 
 # Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
 # Inpatient Admissions OPD First Attendance                 <NA> 
@@ -121,10 +82,28 @@ outpatient.df <-oneprov.df[ which(oneprov.df$Data_Element=='OPD First Attendance
 # Are there any missing values in Value?
 unique(outpatient.df$Value, useNA = "always")
 
+#attempt to change factors to character variables
+# is this necessary?
+outpatient.df %>% mutate_if(is.factor, as.character) -> outpatient.df
+typeof(mydata$Province)
+typeof(mydata$Org_Unit)
+
 #Aggregate Value Data by the HF, Month and Year
 #outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
 # commenting this out for now (on 6-4-20) so that Province is also included in dataframe
 outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Total_Value = sum(Value))
+
+# ------ Toying around with group_by
+outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Total_Value = sum(Value))
+
+outpatient2 %>%
+    group_by(Province) %>%
+    group_by(District) %>% 
+    group_by(Org_Unit) %>% 
+    group_by(Year) %>% 
+    group_by(Month) %>% 
+    group_map(~ head(.x, 2L))
+#------
 
 #Create Date from Month, Year
 outpatient2$month_num <- match(outpatient2$Month, month.abb)
@@ -138,7 +117,7 @@ order("unique.outpatient2.District.") #is this producing what it is supposed to?
 Districts.df[,order("unique.outpatient2.District."(df))]
 
 # ---- write to csv file
-write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
+# write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
 
 # Produce time series figures for the following districts -----------------
 
@@ -153,6 +132,7 @@ write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Proj
 # [57] Sioma District        Limulunga District    Luampa District       Mitete District       Mafinga District      Lavushimanda District Kanchibiya District  
 # [64] Mongu District        Shang'ombo District   Chadiza District      Chembe District       Nkeyema District   
 
+# this produces faceted time series line plot
 outpatient2 %>%
     filter(District=="Kaoma District") %>%
     ggplot() +
@@ -169,7 +149,7 @@ outpatient2 %>%
 mydata <- outpatient2
 
 # Drop the columns of the dataframe
-mydata <- subset(outpatient2, select = c(Province, District, Org_Unit, Total_Value, date))
+mydata <- subset(outpatient2, select = c(Province, District, Org_Unit, Total_Value, date)) # Province, District, Org_Unit
 
 # sort by date
 mydata2<-mydata[order(as.Date(mydata$date, format = "%d/%m/%Y")),]
@@ -179,7 +159,29 @@ mydata2 %>%    # Twitter and GESD
     time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
                    # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
                    # method uses trend to remove the trend (see decompose_twitter()).
-                   frequency = 12, # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+                   frequency = "auto", # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+                   # Consider frequency = "auto" or 12, however obtain more anomalies if 12
+                   trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
+                   # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
+                   merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
+    anomalize(remainder, method = "gesd", 
+              alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
+              max_anoms = 0.20) %>%        # the maximum percentage of data that can be an anomaly
+    time_recompose() %>% 
+    #Anomaly Visualization
+    #plot_anomalies(ncol = 3, alpha_dots = 0.25) # this line of code plots without the grey area
+    plot_anomalies(time_recomposed = TRUE) #+ #, ncol = 3, alpha_dots = 0.25)
+    labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
+         y = "Total outpatient visits", subtitle = "insert subtitle") 
+
+# try facet with mydata 2 twitter method
+# this produces faceted time series line plot
+mydata2 %>%
+    filter(District=="Mwansabombwe District") %>%
+    time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
+                   # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
+                   # method uses trend to remove the trend (see decompose_twitter()).
+                   frequency = "auto", # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
                    # Consider frequency = "auto" or 12, however obtain more anomalies if 12
                    trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
                    # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
@@ -192,7 +194,8 @@ mydata2 %>%    # Twitter and GESD
     #plot_anomalies(ncol = 3, alpha_dots = 0.25) # this line of code plots without the grey area
     plot_anomalies(time_recomposed = TRUE) + #, ncol = 3, alpha_dots = 0.25)
     labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
-         y = "Total outpatient visits", subtitle = "insert subtitle") 
+         y = "Total outpatient visits", subtitle = "insert subtitle") #+
+    facet_wrap(~ Org_Unit, scales="free_y") + theme(strip.text = element_text(size=8))
 
 # details
 mydata2 %>% glimpse()
@@ -255,6 +258,11 @@ p4 <- gesd_outliers %>%
 # Show plots
 p3
 p4
+
+# Experiecing issues
+# Possible solutins
+# 1) consider changing factor to character
+# 2) sapply, lapply
 
 
 
