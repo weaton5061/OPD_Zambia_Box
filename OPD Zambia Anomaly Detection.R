@@ -34,6 +34,7 @@ library(readxl)
 library(ggplot2)
 library(tidyverse)
 library(anomalize)
+library(coindeskr)
 
 ## ---- Set Working Drive -------------------------------------------------------------------------------------
 setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box")
@@ -96,10 +97,11 @@ sixprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" | Province ==  "Muchinga Province" | Province == 'Northern Province' | 
                Province == 'Eastern Province' | Province == 'North Western Province' | Province ==  'Western Province')
 
-# create smaller dataset to test out anomalize package, n = 3,716 observations
+# create smaller dataset to test out anomalize package, n = 606 observations
 # test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
-    filter(Province == "Luapula Province" & District =="Mwansabombwe District")
+    filter(Province == "Luapula Province" & District =="Mwansabombwe District" & 
+            Org_Unit =="lu Mbereshi Mission Hospital")
 
 # Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
 # Inpatient Admissions OPD First Attendance                 <NA> 
@@ -109,8 +111,8 @@ oneprov.df <- inpatient_outpatient.df %>%
 
 outpatient.df <- sixprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
 
-# test same code as above with smaller dataset
-outpatient.df <-oneprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
+# test same code as above with smaller dataset, n = 326 obs
+outpatient.df <-oneprov.df[ which(oneprov.df$Data_Element=='OPD First Attendance'), ]
 
 # Note: confirmed that outpatient.df also has n = 463,739 OPD First Attedance observations
 # table(outpatient.df$Data_Element, useNA = "always")
@@ -162,13 +164,13 @@ outpatient2 %>%
 # Analyze Outliers --------------------------------------------------------
 
 # Analyze outliers: Outlier Report is available with verbose = TRUE
-iqr_outliers <- iqr(outpatient2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+iqr_outliers <- iqr(mydata2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
 
-gesd_outliers <- gesd(outpatient2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
+gesd_outliers <- gesd(mydata2, alpha = 0.05, max_anoms = 0.2, verbose = TRUE)$outlier_report
 
 # ploting function for anomaly plots
-ggsetup <- function(data) {
-    data %>%
+ggsetup <- function(mydata2) {
+    mydata2 %>%
         ggplot(aes(rank, value, color = outlier)) +
         geom_point() +
         geom_line(aes(y = limit_upper), color = "red", linetype = 2) +
@@ -194,11 +196,32 @@ p3
 p4
 
 # Alternative code for assessing outliers ---------------------------------
- %>% 
-    time_decompose(Total_Value) %>% 
-    anomalize(remainder) %>% 
+
+# try deleting the year, month, and month num variables
+
+# How to delete first, second and seventh column
+mydata <- outpatient2
+
+# Drop the columns of the dataframe
+mydata <- subset(outpatient2, select = c(Province, Total_Value, date))
+
+# sort by date
+mydata2<-mydata[order(as.Date(mydata$date, format = "%d/%m/%Y")),]
+
+# Try Twitter and GESD Method ---------------------------------------------
+mydata2 %>%    # Twitter and GESD
+    time_decompose(Total_Value, method = "twitter", trend = "12 months", merge = TRUE) %>% 
+    anomalize(remainder, method = "gesd") %>% 
     time_recompose() %>% 
-    plot_anomalies(time_recomposed = TRUE, ncol = 3, alpha_dots = 0.25)
+    #Anomaly Visualization
+    plot_anomalies(time_recomposed = TRUE) + #, ncol = 3, alpha_dots = 0.25)
+    labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
+         y = "Total outpatient visits", subtitle = "insert subtitle")
+
+
+
+
+
 
 
 
