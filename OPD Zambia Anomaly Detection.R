@@ -17,6 +17,9 @@
 # 6) Produce Figures
 # 7) Produce Tables
 
+## 6-6-20 @ 10:15 pm left off with conversion of variables to character for next run
+# Attempting to try to resolve grey region/CI shift
+
 # Remove all objects form the current workspace
 
 rm(list = ls())
@@ -57,7 +60,7 @@ sixprov.df <- inpatient_outpatient.df %>%
 # Test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" & District =="Mwansabombwe District" &
-               Org_Unit_ID == 1837)
+               Org_Unit_ID == 1763)
 
 # create health facility dataset, n = 
 hf <- subset(sixprov.df, select = c(Province, District, Org_Unit))
@@ -166,6 +169,17 @@ mydata2 %>%    # Twitter and GESD
     labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
          y = "Total outpatient visits") #subtitle = "insert subtitle" 
 
+# STL & IQR Methods (not working)
+mydata2 %>%
+    # Data Manipulation / Anomaly Detection
+    time_decompose(Total_Value, method = "stl") %>%
+    anomalize(remainder, method = "iqr") %>%
+    time_recompose() %>%
+    # Anomaly Visualization
+    plot_anomalies(time_recomposed = TRUE, alpha_dots = 0.25) +
+    labs(title = "Tidyverse Anomalies", subtitle = "STL + IQR Methods")
+
+
 
 # details
 # mydata2 %>% glimpse()
@@ -174,15 +188,15 @@ mydata2 %>%    # Twitter and GESD
 # algorithm detects anomalies in the “remainder”.
 # mydata2 %>%
 #     time_decompose(Total_Value, frequency = "auto", trend = "auto", method = "twitter", merge = TRUE) %>%  # consider frequency = 12, however obtain more anomalies
-#     anomalize(remainder, method = "gesd") %>% 
-#     time_recompose() %>% 
+#     anomalize(remainder, method = "gesd") %>%
+#     time_recompose() %>%
 #     plot_anomaly_decomposition() +
 #     ggtitle("Freq/Trend = 'auto'")
 
 
 
 
-for (i in hf_names_2)
+for (i in mydata2$Org_Unit_ID)
 {
     mydata2 %>%    # Twitter and GESD
         time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
