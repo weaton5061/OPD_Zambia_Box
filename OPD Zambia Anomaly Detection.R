@@ -71,7 +71,7 @@ sixprov.df <- inpatient_outpatient.df %>%
 # Test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" & District =="Mwansabombwe District" &
-               Org_Unit_ID == 1837)
+                Org_Unit_ID == 1763 | Org_Unit_ID == 1709)
 
 # create health facility dataset, n = 
 hf <- subset(sixprov.df, select = c(Province, District, Org_Unit_ID))
@@ -132,30 +132,68 @@ mydata2<-mydata[order(as.Date(mydata$date, format = "%Y-%m-%d")),]
 # 3) Anomaly lower and upper bound transformation with time_recompose()
 
 # test out code from website:
-mydata2%>%
-    ungroup()
 
+# Time series decomposition -----------------------------------------------
+mydata2 %>% 
+    ungroup()
 mydata2_anomaly <-  mydata2 %>% 
     time_decompose(Total_Value)
 mydata2_anomaly
 mydata2_anomaly %>% glimpse()
+
+
+# Detect anomalies in the remainder ---------------------------------------
 mydata2_anomaly = mydata2_anomaly %>% 
     anomalize(remainder)
 mydata2_anomaly
 mydata2_anomaly %>% glimpse()
 
+# Anomaly lower and upper bound transformation ----------------------------
+mydata2_anomaly = mydata2_anomaly %>% 
+    time_recompose()
 
+mydata2_anomaly %>% glimpse()
+mydata2_anomaly
+View(mydata2_anomaly)
+
+# Visualize the inner workings of how algorithm detects anomalies, plot anomaly decomoposition
+mydata2 %>%
+    ungroup() %>%
+    time_decompose(Total_Value) %>%
+    anomalize(remainder) %>%
+    plot_anomaly_decomposition() +
+    labs(title = "Anomaly Decomposition Default")
+
+# Adjusting parameters for Anomaly detection
+# THIS IS WORKING!!!!
+mydata2 %>%
+    ungroup() %>% # group or ungroup
+    time_decompose(Total_Value, method = "twitter") %>%
+    anomalize(remainder, method = "gesd", alpha = 0.05, max_anoms = 0.20) %>%
+    time_recompose() %>% 
+    plot_anomalies(time_recompose = T) +
+    labs(title = "Anomaly Default")
 
 # plot_anomaly_decomposition() for visualizing the inner workings of how 
 # algorithm detects anomalies in the “remainder”.
 mydata2 %>%
+    ungroup() %>% 
     time_decompose(Total_Value, frequency = "auto", trend = "auto", method = "twitter", merge = TRUE) %>%  # consider frequency = 12, however obtain more anomalies
     anomalize(remainder, method = "gesd") %>%
      time_recompose() %>%
     plot_anomaly_decomposition() +
     ggtitle("Freq/Trend = 'auto'")
 
+# Visualize line plot for comparison
+mydata2 %>%
+    filter(Org_Unit_ID==1763) %>%
+    ggplot() +
+    geom_line(mapping = (aes(x=date, y=Total_Value))) + 
+    facet_wrap(~ Org_Unit_ID, scales="free_y") + theme(strip.text = element_text(size=8))
+
+# Plot anomalies (THIS IS WORKING TOO - on one heatlth facility)
 mydata2 %>%    # Twitter and GESD
+    ungroup() %>% 
     time_decompose(Total_Value, method = "twitter") %>% #, # The time series decomposition method. One of "stl" or "twitter". The
                    # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
                    # method uses trend to remove the trend (see decompose_twitter()).
@@ -165,7 +203,9 @@ mydata2 %>%    # Twitter and GESD
                    #trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
                    # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
                    #merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
-    anomalize(remainder, method = "gesd",  
+    anomalize(remainder, method = "gesd",   # The GESD Method (Generlized Extreme Studentized Deviate Test) progressively eliminates out- liers using a Student’s T-Test comparing the test statistic to a critical value. 
+                                            # Each time an outlier is removed, the test statistic is updated. Once test statistic drops below the critical value, all outliers are considered removed. Because this method involves continuous updating via a loop, it is slower than the IQR method. 
+                                            # However, it tends to be the best performing method for outlier removal.
                alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
                max_anoms = 0.20) %>%            # the maximum percentage of data that can be an anomaly
                #verbose = TRUE) %>%         # return a report of useful information related to the outliers
@@ -176,15 +216,29 @@ mydata2 %>%    # Twitter and GESD
     labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
          y = "Total outpatient visits") #subtitle = "insert subtitle" 
 
-# STL & IQR Methods (not working)
-mydata2 %>%
-    # Data Manipulation / Anomaly Detection
-    time_decompose(Total_Value, method = "stl") %>%
-    anomalize(remainder, method = "iqr") %>%
-    time_recompose() %>%
-    # Anomaly Visualization
-    plot_anomalies(time_recomposed = TRUE, alpha_dots = 0.25) +
-    labs(title = "Tidyverse Anomalies", subtitle = "STL + IQR Methods")
+# try for two health facilities
+gapply(inpatient_outpatient.df, class)
+gapply(mydata2, which, FUN, form, level, groups, ...)
+
+# defining a function
+anomalies_health_fac <- function(anomalies_hf) { 
+    mydata2 %>%
+        ungroup() %>% # group or ungroup
+        time_decompose(Total_Value, method = "twitter") %>%
+        anomalize(remainder, method = "gesd", alpha = 0.05, max_anoms = 0.20) %>%
+        time_recompose() %>% 
+        plot_anomalies(time_recompose = T) +
+        labs(title = "Anomaly Default")
+}
+
+# 6-7-10 LEFT OFF HERE - Try to figure out how to run code on groups with use of ungroup function.
+
+# run function by group
+gapply(mydata2, anomalies_health_fac)
+
+# run function by group on tibbles
+group_map(mydata2, anomalies_health_fac, .keep = FALSE)
+
 
 
 
