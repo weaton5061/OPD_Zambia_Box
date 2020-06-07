@@ -44,6 +44,16 @@ setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repositor
 ## ---- Import Inpatient Outpatient Facility Data  -------------------------------------------------------------------------------------
 inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")
 
+# Examine variable classes ------------------------------------------------
+lapply(inpatient_outpatient.df, class)
+
+# convert factor variables to character variables ----------------------------------
+inpatient_outpatient.df <- inpatient_outpatient.df %>% mutate_if(is.factor, as.character)
+
+# Ensure class conversion executed appropriately --------------------------
+lapply(inpatient_outpatient.df, class)
+
+
 ## ---- subset to appropriate n= 6 Provinces  -------------------------------------------------------------------------------
 #  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
 #  ----n = 68 Districts, over 1000 health facilities
@@ -57,19 +67,19 @@ sixprov.df <- inpatient_outpatient.df %>%
 #               [3] lu Kazembe Zonal Rural Health Centre                  lu Lufubu Rural Health Centre                        
 #               [5] lu Salanga Rural Health Centre                        lu Chipunka Rural Health Centre                      
 #               [7] lu Mukamba Rural Health Centre  
+
 # Test out anomalize package on oneprov
 oneprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" & District =="Mwansabombwe District" &
-               Org_Unit_ID == 1763)
+               Org_Unit_ID == 1837)
 
 # create health facility dataset, n = 
-hf <- subset(sixprov.df, select = c(Province, District, Org_Unit))
+hf <- subset(sixprov.df, select = c(Province, District, Org_Unit_ID))
 hf_names<-distinct(hf)
 # sort health facilities by multiple columns
 hf_names_2 <- hf_names[
     with(hf_names, order(Province, District)),
     ]
-
 
 # Note: in_out_pt_6_pro.df has n = 463,739 OPD First Attendance observations
 # Inpatient Admissions OPD First Attendance                 <NA> 
@@ -88,51 +98,15 @@ outpatient.df <-oneprov.df[ which(oneprov.df$Data_Element=='OPD First Attendance
 #                   0               463739                    0 
 
 
-#attempt to change factors to character variables
-# is this necessary?
-# outpatient.df %>% mutate_if(is.factor, as.character) -> outpatient.df
-
-
 #Aggregate Value Data by the HF, Month and Year
 #outpatient1 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District) %>% summarize(Value = sum(Value))
 # commenting this out for now (on 6-4-20) so that Province is also included in dataframe
 # outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit, District, Province) %>% summarize(Total_Value = sum(Value))
 outpatient2 <- outpatient.df %>% group_by(Year, Month, Org_Unit_ID, District, Province) %>% summarize(Total_Value = sum(Value))
 
-
 #Create Date from Month, Year
 outpatient2$month_num <- match(outpatient2$Month, month.abb)
 outpatient2$date <- as.Date(with(outpatient2, paste(Year, month_num, 1, sep="-")), "%Y-%m-%d")
-
-#Identify all Unique Values for District
-# Districts.df <- data.frame(unique(outpatient2$District)) # n = 68 unique districts
-# order("unique.outpatient2.District.") #is this producing what it is supposed to?
-# 
-# # Note: not sure what this code does?
-# Districts.df[,order("unique.outpatient2.District."(df))]
-
-# ---- write to csv file
-# write.csv(outpatient2, file = "/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box/OPD_Zambia_R_Working_Drive/csv/outpatient2.csv")
-
-# Produce time series figures for the following districts -----------------
-
-# [1] Kaoma District        Kaputa District       Mansa District        Manyinga District     Kawambwa District     Lukulu District       Kalumbila District   
-# [8] Nalolo District       Senga District        Petauke District      Senanga District      Chifunabuli District  Chienge District      Solwezi District     
-# [15] Mushindamo District   Sinda District        Sikongo District      Mungwi District       Vubwi District        Kabompo District      Mbala District       
-# [22] Lundazi District      Mwense District       Zambezi District      Mwandi District       Mambwe District       Chipata District      Nchelenge District   
-# [29] Chinsali District     Mufumbwe District     Chama District        Kasama District       Nsama District        Chipili District      Kalabo District      
-# [36] Chavuma District      Nyimba District       Kasempa District      Shiwang'andu District Lunte District        Nakonde District      Sesheke District     
-# [43] Lunga District        Katete District       Samfya District       Chilubi District      Isoka District        Luwingu District      Ikelenge District    
-# [50] Mwansabombwe District Mpulungu District     Milenge District      Mporokoso District    Mwinilunga District   Mulobezi District     Mpika District       
-# [57] Sioma District        Limulunga District    Luampa District       Mitete District       Mafinga District      Lavushimanda District Kanchibiya District  
-# [64] Mongu District        Shang'ombo District   Chadiza District      Chembe District       Nkeyema District   
-
-# -- this produces faceted time series line plot --
-# outpatient2 %>%
-#     filter(District=="Mwansabombwe District") %>%
-#     ggplot() +
-#     geom_line(mapping = (aes(x=date, y=Total_Value))) +
-#     facet_wrap(~ Org_Unit, scales="free_y") + theme(strip.text = element_text(size=8))
 
 
 # Analyze Outliers --------------------------------------------------------
@@ -147,17 +121,50 @@ mydata2<-mydata[order(as.Date(mydata$date, format = "%Y-%m-%d")),]
 
 
 # Try Twitter and GESD Method ---------------------------------------------
+# The workflow of anomalize is divided into three parts:
+#     
+# 1) Time series decomposition with time_decompose(). - The measured value or the numerical value on which detection needs to be performed for a particular group 
+#    is decomposed into four columns that are observed, season, trend, and remainder. The default method used for decomposition is stl, which is a seasonal decomposition utilizing a Loess smoother.
+#    There is a second technique which you can use for seasonal decomposition in time series based on median that is the Twitter method which is also used AnomalyDetection package. 
+#    It is identical to STL for removing the seasonal component. The difference is in removing the trend is that it uses piece-wise median of the data(one or several median split at specified intervals) rather than fitting a smoother. 
+#    This method works well where seasonality dominates the trend in time series.
+# 2) Anomaly detection of remainder with anomalize().
+# 3) Anomaly lower and upper bound transformation with time_recompose()
+
+# test out code from website:
+mydata2%>%
+    ungroup()
+
+mydata2_anomaly <-  mydata2 %>% 
+    time_decompose(Total_Value)
+mydata2_anomaly
+mydata2_anomaly %>% glimpse()
+mydata2_anomaly = mydata2_anomaly %>% 
+    anomalize(remainder)
+mydata2_anomaly
+mydata2_anomaly %>% glimpse()
+
+
+
+# plot_anomaly_decomposition() for visualizing the inner workings of how 
+# algorithm detects anomalies in the “remainder”.
+mydata2 %>%
+    time_decompose(Total_Value, frequency = "auto", trend = "auto", method = "twitter", merge = TRUE) %>%  # consider frequency = 12, however obtain more anomalies
+    anomalize(remainder, method = "gesd") %>%
+     time_recompose() %>%
+    plot_anomaly_decomposition() +
+    ggtitle("Freq/Trend = 'auto'")
 
 mydata2 %>%    # Twitter and GESD
-    time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
+    time_decompose(Total_Value, method = "twitter") %>% #, # The time series decomposition method. One of "stl" or "twitter". The
                    # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
                    # method uses trend to remove the trend (see decompose_twitter()).
                    #target = "Org_Unit_ID",
-                   frequency = "auto",  # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+                   #frequency = "auto",  # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
                    # Consider frequency = "auto" or 12, however obtain more anomalies if 12
-                   trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
+                   #trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
                    # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
-                   merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
+                   #merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
     anomalize(remainder, method = "gesd",  
                alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
                max_anoms = 0.20) %>%            # the maximum percentage of data that can be an anomaly
