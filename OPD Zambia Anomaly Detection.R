@@ -4,7 +4,7 @@
 # Notes: Ruth requests concentrating on 6 Provinces: Luapula, Muchinga, Northern, Eastern, Northwestern, Western
 #        n = approx 70 districts total
 # Created: 06-04-2020
-# Last updated: 06-06-2020
+# Last updated: 06-07-2020
 # Status: in progress
 # Notes: Editing for OPD anomolies 
 
@@ -17,9 +17,6 @@
 # 6) Produce Figures
 # 7) Produce Tables
 # 8) Idea: subset and make a bunch of independent subset tibbles grouped by Org_Unit_ID and then create loop code to run on each tibble
-
-## 6-6-20 @ 10:15 pm left off with conversion of variables to character for next run
-# Attempting to try to resolve grey region/CI shift
 
 # Remove all objects form the current workspace
 
@@ -119,14 +116,6 @@ mydata <- subset(outpatient2, select = c(Org_Unit_ID, Total_Value, date)) # Prov
 # sort by date
 #mydata2<-mydata[order(as.Date(mydata$date, format = "%d/%m/%Y")),]
 mydata2<-mydata[order(as.Date(mydata$date, format = "%Y-%m-%d")),]
-
-# test out ungrouping of mydata2
-ungroup(mydata2) # ungroup
-
-mydata2 %>%  #group
-    group_by(Org_Unit_ID)
-    
-
 
 # Try Twitter and GESD Method ---------------------------------------------
 # The workflow of anomalize is divided into three parts:
