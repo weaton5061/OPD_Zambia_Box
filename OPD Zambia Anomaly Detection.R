@@ -84,7 +84,6 @@ hf_names_2 <- hf_names[
 #             112547               463739                    0 
 
 ##----aggregate data -------------------------------------------------------------------------------
-
 outpatient.df <- sixprov.df[ which(sixprov.df$Data_Element=='OPD First Attendance'), ]
 
 # test same code as above with smaller dataset, n = 326 obs
