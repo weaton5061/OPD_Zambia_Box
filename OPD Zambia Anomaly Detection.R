@@ -44,7 +44,6 @@ setwd("C:/Users/admin/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/
 inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv") #mac
 inpatient_outpatient.df <- read.csv("C:/Users/admin/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")   # pc
 
-
 # Examine variable classes ------------------------------------------------
 lapply(inpatient_outpatient.df, class)
 
@@ -92,7 +91,7 @@ outpatient.df <- sixprov.df[ which(sixprov.df$Data_Element=='OPD First Attendanc
 # test same code as above with smaller dataset, n = 326 obs
 outpatient.df <-oneprov.df[ which(oneprov.df$Data_Element=='OPD First Attendance'), ]
 
-# Note: confirmed that outpatient.df also has n = 463,739 OPD First Attedance observations
+# Note: confirmed that outpatient.df also has n = 463,739 OPD First Attendance observations
 # table(outpatient.df$Data_Element, useNA = "always")
 # Inpatient Admissions OPD First Attendance                 <NA>
 #                   0               463739                    0 
@@ -139,7 +138,6 @@ mydata2_anomaly <-  mydata2 %>%
     time_decompose(Total_Value)
 mydata2_anomaly
 mydata2_anomaly %>% glimpse()
-
 
 # Detect anomalies in the remainder ---------------------------------------
 mydata2_anomaly = mydata2_anomaly %>% 
