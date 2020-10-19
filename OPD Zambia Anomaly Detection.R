@@ -4,9 +4,9 @@
 # Notes: Ruth requests concentrating on 6 Provinces: Luapula, Muchinga, Northern, Eastern, Northwestern, Western
 #        n = approx 70 districts total
 # Created: 06-04-2020
-# Last updated: 06-07-2020
+# Last updated: 10-19-2020 (with input from Travis Porter)
 # Status: in progress
-# Notes: Editing for OPD anomolies 
+# Notes: Editing for OPD anomalies 
 
 # ---- GAMEPLAN -------------------------------------------------------------------------------------------------------
 # 1) Examine data
@@ -54,6 +54,9 @@ inpatient_outpatient.df <- inpatient_outpatient.df %>% mutate_if(is.factor, as.c
 lapply(inpatient_outpatient.df, class)
 
 
+# Note: No need to subset if you want to run code on full dataset. Initially
+# subset data to make it more manageable for testing out code.
+
 ## ---- subset to appropriate n= 6 Provinces  -------------------------------------------------------------------------------
 #  ---- Luapula, Muchinga, Northern, Eastern, Northwestern, Western ------------------------------------------------------
 #  ----n = 68 Districts, over 1000 health facilities
@@ -68,7 +71,7 @@ sixprov.df <- inpatient_outpatient.df %>%
 #               [5] lu Salanga Rural Health Centre                        lu Chipunka Rural Health Centre                      
 #               [7] lu Mukamba Rural Health Centre  
 
-# Test out anomalize package on oneprov
+# Test out anomalize package on oneprov (with two Org_Units)
 oneprov.df <- inpatient_outpatient.df %>%
     filter(Province == "Luapula Province" & District =="Mwansabombwe District" &
                 Org_Unit_ID == 1763 | Org_Unit_ID == 1709)
@@ -188,23 +191,35 @@ mydata2 %>%
     geom_line(mapping = (aes(x=date, y=Total_Value))) + 
     facet_wrap(~ Org_Unit_ID, scales="free_y") + theme(strip.text = element_text(size=8))
 
-# Plot anomalies (THIS IS WORKING TOO - on one heatlth facility)
-mydata2 %>%    # Twitter and GESD
-    ungroup() %>% 
-    time_decompose(Total_Value, method = "twitter") %>% #, # The time series decomposition method. One of "stl" or "twitter". The
-                   # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
-                   # method uses trend to remove the trend (see decompose_twitter()).
-                   #target = "Org_Unit_ID",
-                   #frequency = "auto",  # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
-                   # Consider frequency = "auto" or 12, however obtain more anomalies if 12
-                   #trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
-                   # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
-                   #merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
-    anomalize(remainder, method = "gesd",   # The GESD Method (Generlized Extreme Studentized Deviate Test) progressively eliminates out- liers using a Student’s T-Test comparing the test statistic to a critical value. 
-                                            # Each time an outlier is removed, the test statistic is updated. Once test statistic drops below the critical value, all outliers are considered removed. Because this method involves continuous updating via a loop, it is slower than the IQR method. 
-                                            # However, it tends to be the best performing method for outlier removal.
-               alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
-               max_anoms = 0.20) %>%            # the maximum percentage of data that can be an anomaly
+# Plot anomalies ----------------------------------------------------
+# THIS IS WORKING TOO - on two health facilities after Travis' help)
+# Note: change the following code below to run on full dataset, i.e. change
+# "mydata2" to another dataset.
+# Consider modifications to code if you'd prefer for the outputs to not be 
+# faceted. 
+
+# Twitter and GESD
+
+# The GESD Method (Generlized Extreme Studentized Deviate Test) progressively eliminates outliers using a Student’s T-Test comparing the test statistic to a critical value. 
+# Each time an outlier is removed, the test statistic is updated. Once test statistic drops below the critical value, all outliers are considered removed. Because this method involves continuous updating via a loop, it is slower than the IQR method. 
+# However, it tends to be the best performing method for outlier removal.
+
+
+mydata2 %>%    
+    group_by(Org_Unit_ID) %>% 
+    time_decompose(Total_Value, method = "twitter") %>% 
+    # The time series decomposition method. One of "stl" or "twitter". The
+    # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
+    # method uses trend to remove the trend (see decompose_twitter()).
+    # target = "Org_Unit_ID",
+    # frequency = "auto",  # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+    # Consider frequency = "auto" or 12, however obtain more anomalies if 12
+    # trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
+    # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
+    # merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
+    anomalize(remainder, method = "gesd",   
+               alpha = 0.05,                # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
+               max_anoms = 0.20) %>%        # the maximum percentage of data that can be an anomaly
                #verbose = TRUE) %>%         # return a report of useful information related to the outliers
     time_recompose() %>% 
     #Anomaly Visualization
@@ -213,9 +228,11 @@ mydata2 %>%    # Twitter and GESD
     labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
          y = "Total outpatient visits") #subtitle = "insert subtitle" 
 
-# try for two health facilities
-gapply(inpatient_outpatient.df, class)
-gapply(mydata2, which, FUN, form, level, groups, ...)
+# -----------------------------------------------------------------------------
+
+# # try for two health facilities
+# gapply(inpatient_outpatient.df, class)
+# gapply(mydata2, which, FUN, form, level, groups, ...)
 
 # defining a function
 anomalies_health_fac <- function(anomalies_hf) { 
@@ -229,13 +246,13 @@ anomalies_health_fac <- function(anomalies_hf) {
 }
 
 # 6-7-10 LEFT OFF HERE - Try to figure out how to run code on groups with use of ungroup function.
-
-# run function by group
-gapply(mydata2, anomalies_health_fac)
-
-# run function by group on tibbles
-group_map(mydata2, anomalies_health_fac, .keep = FALSE)
-
+# 
+# # run function by group
+# gapply(mydata2, anomalies_health_fac)
+# 
+# # run function by group on tibbles
+# group_map(mydata2, anomalies_health_fac, .keep = FALSE)
+# 
 
 
 
@@ -245,7 +262,9 @@ group_map(mydata2, anomalies_health_fac, .keep = FALSE)
 # plot_anomaly_decomposition() for visualizing the inner workings of how 
 # algorithm detects anomalies in the “remainder”.
 # mydata2 %>%
-#     time_decompose(Total_Value, frequency = "auto", trend = "auto", method = "twitter", merge = TRUE) %>%  # consider frequency = 12, however obtain more anomalies
+#     time_decompose(Total_Value, frequency = "auto",     # consider frequency = 12, however obtain more anomalies
+#                    trend = "auto", method = "twitter", 
+#                    merge = TRUE) %>%  
 #     anomalize(remainder, method = "gesd") %>%
 #     time_recompose() %>%
 #     plot_anomaly_decomposition() +
@@ -254,30 +273,33 @@ group_map(mydata2, anomalies_health_fac, .keep = FALSE)
 
 
 
-for (i in mydata2$Org_Unit_ID)
-{
-    mydata2 %>%    # Twitter and GESD
-        time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
-                       # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
-                       # method uses trend to remove the trend (see decompose_twitter()).
-                       frequency = "auto", # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
-                       # Consider frequency = "auto" or 12, however obtain more anomalies if 12
-                       trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
-                       # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
-                       merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
-        anomalize(remainder, method = "gesd", 
-                  alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
-                  max_anoms = 0.20,           # the maximum percentage of data that can be an anomaly
-                  verbose = TRUE) %>%         # return a report of useful information related to the outliers
-        time_recompose() %>% 
-        #Anomaly Visualization
-        #plot_anomalies(ncol = 3, alpha_dots = 0.25) # this line of code plots without the grey area
-        plot_anomalies(time_recomposed = TRUE) #+ #, ncol = 3, alpha_dots = 0.25)
-    labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
-         y = "Total outpatient visits", subtitle = "insert subtitle") 
-}
-
-
+# need to revise this code---------------------------
+# Travis confirmed that a for loop would be slower
+# 
+# for (i in mydata2$Org_Unit_ID)
+# {
+#     mydata2 %>%    # Twitter and GESD
+#         time_decompose(Total_Value, method = "twitter", # The time series decomposition method. One of "stl" or "twitter". The
+#                        # STL method uses seasonal decomposition (see decompose_stl()). The Twitter
+#                        # method uses trend to remove the trend (see decompose_twitter()).
+#                        frequency = "auto", # Controls the seasonal adjustment (removal of seasonality). Input can be either "auto", a time-based definition (e.g. "2 weeks"), or a numeric number of obser- vations per frequency (e.g.)
+#                        # Consider frequency = "auto" or 12, however obtain more anomalies if 12
+#                        trend = "auto", # Controls the trend component For stl, the trend controls the sensitivity of the lowess smoother, which is used to remove the remainder. 
+#                        # For twitter, the trend controls the period width of the median, which are used to remove the trend and center the remainder.
+#                        merge = TRUE) %>%  # A boolean. FALSE by default. If TRUE, will append results to the original data.
+#         anomalize(remainder, method = "gesd", 
+#                   alpha = 0.05,               # We can decrease alpha, which increases the bands making it more difficult to be an outlier. In reality, you’ll probably want to leave alpha in the range of 0.10 to 0.02, but it makes a nice illustration of how you can also use max_anoms to ensure only the most aggregious anomalies are identified.
+#                   max_anoms = 0.20,           # the maximum percentage of data that can be an anomaly
+#                   verbose = TRUE) %>%         # return a report of useful information related to the outliers
+#         time_recompose() %>% 
+#         #Anomaly Visualization
+#         #plot_anomalies(ncol = 3, alpha_dots = 0.25) # this line of code plots without the grey area
+#         plot_anomalies(time_recomposed = TRUE) #+ #, ncol = 3, alpha_dots = 0.25)
+#     labs(title = "Time seriesd data - Twitter + GESD Method", x = "Time",
+#          y = "Total outpatient visits", subtitle = "insert subtitle") 
+# }
+# 
+# 
 
 
 
