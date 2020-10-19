@@ -6,7 +6,7 @@ rm(list = ls())
 #This function closes the specified plot (by default the current device) and if it is an imguR device, uploads the plots for web hosting
 dev.off()
 #Clear startup screen/console in R / RStudio
-cat("\014") 
+cat("/014") 
 ## ---- Load appropriate packages -------------------------------------------------------------------------------------
 library(openxlsx)
 library(readxl)
@@ -16,10 +16,13 @@ library(anomalize)
 library(dplyr)
 
 ## ---- Set Working Drive -------------------------------------------------------------------------------------
-setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box")
+setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box") # mac
+setwd("C:/Users/admin/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box") #
 
 ## ---- Import Inpatient Outpatient Facility Data  -------------------------------------------------------------------------------------
-inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")
+inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv") # mac
+inpatient_outpatient.df <- read.csv("C:/Users/admin/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")   # pc
+
 
 # Examine variable classes ------------------------------------------------
 lapply(inpatient_outpatient.df, class)

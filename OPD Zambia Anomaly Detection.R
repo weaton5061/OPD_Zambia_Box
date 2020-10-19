@@ -37,10 +37,13 @@ library(anomalize)
 library(dplyr)
 
 ## ---- Set Working Drive -------------------------------------------------------------------------------------
-setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box")
+setwd("/Users/willeaton/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box") # mac
+setwd("C:/Users/admin/Box/OPD Cleaning/OPD Zambia Project Cloned Git Repository/OPD_Zambia_Project_Box")   # pc
 
 ## ---- Import Inpatient Outpatient Facility Data  -------------------------------------------------------------------------------------
-inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")
+inpatient_outpatient.df <- read.csv("/Users/willeaton/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv") #mac
+inpatient_outpatient.df <- read.csv("C:/Users/admin/Box/OPD Cleaning/inpatient_outpatient_facility_data.csv")   # pc
+
 
 # Examine variable classes ------------------------------------------------
 lapply(inpatient_outpatient.df, class)
